@@ -14,6 +14,7 @@ const dashboardRoot = path.join(sourceRoot, 'RebootDashboard')
 const fallbackDashboardRoot = path.join(fallbackSourceRoot, 'RebootDashboard')
 const outputDir = path.join(repoRoot, 'dist')
 const viteBase = process.env.REBOOT_SITE_BASE ?? './'
+const publishTarget = process.env.REBOOT_PUBLISH_TARGET ?? 'dashboard'
 
 async function pathExists(target) {
   try {
@@ -58,16 +59,58 @@ async function resolveDashboardRoot() {
   )
 }
 
-const resolvedDashboardRoot = await resolveDashboardRoot()
-const dashboardDist = path.join(resolvedDashboardRoot, 'dist')
+async function resolveSourceRoot() {
+  if (await pathExists(sourceRoot)) {
+    return sourceRoot
+  }
 
-await run('npm', ['install'], resolvedDashboardRoot)
-await run('npm', ['run', 'build', '--', `--base=${viteBase}`], resolvedDashboardRoot, {
-  REBOOT_STATIC_SITE: 'true',
-})
+  if (!process.env.REBOOT_SOFTWARE_DIR && await pathExists(fallbackSourceRoot)) {
+    return fallbackSourceRoot
+  }
 
-await rm(outputDir, { recursive: true, force: true })
-await cp(dashboardDist, outputDir, { recursive: true })
+  throw new Error(
+    `Missing RebootSoftware. Set REBOOT_SOFTWARE_DIR or checkout RebootSoftware into ${defaultSource}.`,
+  )
+}
 
-console.log(`Built static site from ${resolvedDashboardRoot}`)
-console.log(`Wrote ${outputDir}`)
+async function publishDashboard() {
+  const resolvedDashboardRoot = await resolveDashboardRoot()
+  const dashboardDist = path.join(resolvedDashboardRoot, 'dist')
+
+  await run('npm', ['install'], resolvedDashboardRoot)
+  await run('npm', ['run', 'build', '--', `--base=${viteBase}`], resolvedDashboardRoot, {
+    REBOOT_STATIC_SITE: 'true',
+  })
+
+  await rm(outputDir, { recursive: true, force: true })
+  await cp(dashboardDist, outputDir, { recursive: true })
+
+  console.log(`Built static dashboard from ${resolvedDashboardRoot}`)
+  console.log(`Wrote ${outputDir}`)
+}
+
+async function publishRebootSiteV6() {
+  const resolvedSourceRoot = await resolveSourceRoot()
+  const rebootSiteV6Root = path.join(resolvedSourceRoot, 'RebootSiteV6')
+
+  if (!await pathExists(rebootSiteV6Root)) {
+    throw new Error(`Missing RebootSiteV6 at ${rebootSiteV6Root}`)
+  }
+
+  await rm(outputDir, { recursive: true, force: true })
+  await cp(rebootSiteV6Root, outputDir, {
+    recursive: true,
+    filter: (source) => !source.split(path.sep).includes('.vs'),
+  })
+
+  console.log(`Published RebootSiteV6 from ${rebootSiteV6Root}`)
+  console.log(`Wrote ${outputDir}`)
+}
+
+if (publishTarget === 'dashboard') {
+  await publishDashboard()
+} else if (publishTarget === 'v6') {
+  await publishRebootSiteV6()
+} else {
+  throw new Error(`Unknown REBOOT_PUBLISH_TARGET "${publishTarget}". Use "dashboard" or "v6".`)
+}

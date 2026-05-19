@@ -1,0 +1,13 @@
+{
+  "name": "reboot-website",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-static-site.mjs",
+    "preview": "npx --yes vite preview --host 127.0.0.1"
+  },
+  "devDependencies": {
+    "vite": "^8.0.12"
+  }
+}

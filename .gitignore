@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.source/
+.DS_Store
+.env
+.env.*
+*.log
+.npm/
+.vite/
+.playwright-mcp/
+coverage/
+memory.md
